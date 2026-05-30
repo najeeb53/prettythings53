@@ -442,44 +442,252 @@
 
       function downloadAppJs() {
         syncWhatsApp();
-        const catalogJson = JSON.stringify(catalog, null, 2);
 
-        // Read the current app.js from the server, then swap out only the catalog block
-        fetch("app.js")
-          .then((res) => res.text())
-          .then((source) => {
-            // Replace everything from `window.PT_DEFAULT_CATALOG = {` up to the first `};`
-            // that closes that object (we look for the pattern used in the original file)
-            const newCatalogLine = `window.PT_DEFAULT_CATALOG = ${catalogJson};`;
-            const updated = source.replace(
-              /window\.PT_DEFAULT_CATALOG\s*=\s*\{[\s\S]*?\n\};/,
-              newCatalogLine
-            );
+        // The full app code after the catalog block — hardcoded so this always works
+        // regardless of what version of app.js is on the server.
+        const appCode = `
+function loadCatalog() {
+  try {
+    const savedCatalog = localStorage.getItem("PRETTY_THINGS_STORE_DATA");
+    return savedCatalog ? JSON.parse(savedCatalog) : structuredClone(window.PT_DEFAULT_CATALOG);
+  } catch {
+    return structuredClone(window.PT_DEFAULT_CATALOG);
+  }
+}
 
-            if (updated === source) {
-              // Fallback: couldn't find the pattern — prepend the catalog assignment
-              setStatus("⚠ Could not auto-patch app.js. Downloading with catalog prepended.");
-              download("app.js", newCatalogLine + "\n\n" + source);
-            } else {
-              setStatus("app.js downloaded! Replace the file on Cloudflare Pages and redeploy.");
-              download("app.js", updated);
-            }
-          })
-          .catch(() => {
-            // If fetch fails (e.g. opened from filesystem), just generate the catalog block
-            // and wrap it with the rest of the known boilerplate stripped of the old catalog
-            setStatus("⚠ Could not read app.js from server — downloading catalog-only file. Manually prepend to your app.js.");
-            download("app.js", `window.PT_DEFAULT_CATALOG = ${catalogJson};\n`);
-          });
+if (document.querySelector("#productGrid")) {
+const catalog = loadCatalog();
+const whatsappNumber = catalog.whatsappNumber;
+const products = catalog.categories.flatMap((category) =>
+  category.products.map((product) => ({
+    ...product,
+    category: category.id,
+    badge: category.label,
+  }))
+);
 
-        function download(filename, text) {
-          const blob = new Blob([text], { type: "text/javascript" });
-          const link = document.createElement("a");
-          link.href = URL.createObjectURL(blob);
-          link.download = filename;
-          link.click();
-          URL.revokeObjectURL(link.href);
-        }
+const categoryGrid = document.querySelector("#categoryGrid");
+const productGrid = document.querySelector("#productGrid");
+const productFilters = document.querySelector("#productFilters");
+const menuToggle = document.querySelector(".menu-toggle");
+const header = document.querySelector(".site-header");
+
+function whatsappLink(message) {
+  const encoded = encodeURIComponent(message);
+  if (whatsappNumber) {
+    return \`https://wa.me/\${whatsappNumber}?text=\${encoded}\`;
+  }
+  return \`https://wa.me/?text=\${encoded}\`;
+}
+
+function renderProducts(filter = "all") {
+  const visibleProducts = products.filter((product) => filter === "all" || product.category === filter);
+  productGrid.innerHTML = visibleProducts
+    .map(
+      (product) => \`
+        <article class="product-card" data-category="\${product.category}">
+          <figure>
+            <img src="\${product.image}" alt="\${product.name}" loading="lazy">
+          </figure>
+          <div class="product-info">
+            <h3>\${product.name}</h3>
+            <div class="product-meta">
+              <span class="badge">\${product.badge}</span>
+              <span class="price">\${product.price}</span>
+            </div>
+            <a class="button secondary" href="\${whatsappLink(\`Hi Pretty Things, I want to order: \${product.name}. Price shown: \${product.price}\`)}" target="_blank" rel="noreferrer">
+              Order on WhatsApp
+            </a>
+          </div>
+        </article>
+      \`
+    )
+    .join("");
+}
+
+function renderCustomPrints() {
+  const gallery = document.querySelector("#customPrintGallery");
+  if (!gallery) return;
+  const customPrints = catalog.customPrints || [];
+  if (!customPrints.length) {
+    gallery.hidden = true;
+    return;
+  }
+  gallery.hidden = false;
+  gallery.innerHTML = customPrints
+    .map(
+      (item) => \`
+        <article class="custom-print-card">
+          <img src="\${item.image}" alt="\${item.name}" loading="lazy">
+          <span>\${item.name}</span>
+        </article>
+      \`
+    )
+    .join("");
+}
+
+function renderHeroImages() {
+  if (!catalog.categories.length) return;
+  const storage = catalog.categories.find((category) => category.id === "storage");
+  const keychains = catalog.categories.find((category) => category.id === "keychains");
+  const plaques = catalog.categories.find((category) => category.id === "plaques");
+  document.querySelector("#heroMainImage").src = storage?.displayImage || catalog.categories[0].displayImage;
+  document.querySelector("#heroTopImage").src = keychains?.displayImage || catalog.categories[0].displayImage;
+  document.querySelector("#heroBottomImage").src = plaques?.displayImage || catalog.categories[0].displayImage;
+}
+
+function renderCategoryTiles() {
+  if (!catalog.categories.length) {
+    categoryGrid.innerHTML = "";
+    return;
+  }
+  const tiles = catalog.categories
+    .map(
+      (category) => \`
+        <a class="category-tile" href="#shop" data-filter-link="\${category.id}">
+          <img src="\${category.displayImage}" alt="\${category.label} display">
+          <span>\${category.label}</span>
+        </a>
+      \`
+    )
+    .join("");
+  categoryGrid.innerHTML = \`\${tiles}
+    <a class="category-tile" href="#custom">
+      <img src="\${catalog.categories.find((category) => category.secondaryDisplayImage)?.secondaryDisplayImage || catalog.categories[0].displayImage}" alt="Custom 3D printed display">
+      <span>Custom Orders</span>
+    </a>
+  \`;
+}
+
+function setActiveFilter(activeButton) {
+  document.querySelectorAll(".filter").forEach((item) => item.classList.remove("active"));
+  activeButton.classList.add("active");
+}
+
+function renderFilters() {
+  if (!catalog.categories.length) {
+    productFilters.innerHTML = \`<button class="filter active" type="button" data-filter="all">All</button>\`;
+    return;
+  }
+  productFilters.innerHTML = \`
+    <button class="filter active" type="button" data-filter="all">All</button>
+    \${catalog.categories
+      .map((category) => \`<button class="filter" type="button" data-filter="\${category.id}">\${category.label}</button>\`)
+      .join("")}
+  \`;
+  document.querySelectorAll(".filter").forEach((button) => {
+    button.addEventListener("click", () => {
+      setActiveFilter(button);
+      renderProducts(button.dataset.filter);
+    });
+  });
+}
+
+document.querySelectorAll("[data-filter-link]").forEach((link) => {
+  link.addEventListener("click", () => {
+    const filter = link.dataset.filterLink;
+    const button = document.querySelector(\`.filter[data-filter="\${filter}"]\`);
+    if (button) {
+      setTimeout(() => button.click(), 100);
+    }
+  });
+});
+
+menuToggle.addEventListener("click", () => {
+  const isOpen = header.classList.toggle("nav-open");
+  menuToggle.setAttribute("aria-expanded", String(isOpen));
+});
+
+document.querySelectorAll(".main-nav a").forEach((link) => {
+  link.addEventListener("click", () => {
+    header.classList.remove("nav-open");
+    menuToggle.setAttribute("aria-expanded", "false");
+  });
+});
+
+function readForm(form) {
+  return Object.fromEntries(new FormData(form).entries());
+}
+
+document.querySelector("#customForm").addEventListener("submit", (event) => {
+  event.preventDefault();
+  const data = readForm(event.currentTarget);
+  const message = [
+    "Hi Pretty Things, I want a custom 3D print.",
+    \`Text/name: \${data.text || "Not specified"}\`,
+    \`Color: \${data.color || "Not specified"}\`,
+    \`Size: \${data.size || "Not specified"}\`,
+    \`Idea: \${data.idea || "Not specified"}\`,
+    "I can share the reference image here.",
+  ].join("\\n");
+  window.open(whatsappLink(message), "_blank", "noopener,noreferrer");
+});
+
+document.querySelector("#partsForm").addEventListener("submit", (event) => {
+  event.preventDefault();
+  const data = readForm(event.currentTarget);
+  const message = [
+    "Hi Pretty Things, I need a replacement part.",
+    \`Appliance/item: \${data.appliance || "Not specified"}\`,
+    \`Brand/model: \${data.brand || "Not specified"}\`,
+    \`Dimensions: \${data.dimensions || "Not specified"}\`,
+    \`Notes: \${data.notes || "Not specified"}\`,
+    "I can share the part photo here.",
+  ].join("\\n");
+  window.open(whatsappLink(message), "_blank", "noopener,noreferrer");
+});
+
+document.querySelector("#contactForm").addEventListener("submit", (event) => {
+  event.preventDefault();
+  const data = readForm(event.currentTarget);
+  const message = [
+    "Hi Pretty Things, I have an inquiry.",
+    \`Name: \${data.name || "Not specified"}\`,
+    \`Contact: \${data.contact || "Not specified"}\`,
+    \`Message: \${data.message || "Not specified"}\`,
+  ].join("\\n");
+  window.open(whatsappLink(message), "_blank", "noopener,noreferrer");
+});
+
+document.querySelector("#partSearchButton").addEventListener("click", () => {
+  const query = document.querySelector("#partSearch").value.trim();
+  const message = query
+    ? \`Hi Pretty Things, I am looking for a replacement part for: \${query}\`
+    : "Hi Pretty Things, I am looking for a replacement part.";
+  window.open(whatsappLink(message), "_blank", "noopener,noreferrer");
+});
+
+document.querySelector("#floatingWhatsapp").href = whatsappLink(
+  "Hi Pretty Things, I want to place an order or ask about a custom 3D print."
+);
+
+document.querySelector("#contactWhatsapp").href = whatsappLink(
+  "Hi Pretty Things, I want to place an order or ask about a custom 3D print."
+);
+
+renderHeroImages();
+renderCategoryTiles();
+renderFilters();
+renderCustomPrints();
+document.addEventListener("click", (event) => {
+  const link = event.target.closest("[data-filter-link]");
+  if (!link) return;
+  const button = document.querySelector(\`.filter[data-filter="\${link.dataset.filterLink}"]\`);
+  if (button) {
+    setTimeout(() => button.click(), 100);
+  }
+});
+renderProducts();
+}`;
+
+        const fullFile = `window.PT_DEFAULT_CATALOG = ${JSON.stringify(catalog, null, 2)};\n${appCode}`;
+        const blob = new Blob([fullFile], { type: "text/javascript" });
+        const link = document.createElement("a");
+        link.href = URL.createObjectURL(blob);
+        link.download = "app.js";
+        link.click();
+        URL.revokeObjectURL(link.href);
+        setStatus("app.js downloaded! Replace the file on Cloudflare Pages and redeploy.");
       }
 
       function importBackup(event) {
