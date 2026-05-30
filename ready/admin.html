@@ -136,7 +136,6 @@
         <div class="admin-note">
           <strong>Save Changes</strong> updates the website in this browser immediately.
           <strong>Export Backup</strong> downloads a JSON backup you can import later.
-          <strong>⬇ Download app.js</strong> generates a new <code>app.js</code> with all your changes baked in — replace the file on Cloudflare Pages to update the live site for everyone.
         </div>
       </section>
 
@@ -160,7 +159,6 @@
             <button class="button secondary" id="addCategory" type="button">Add Category</button>
             <button class="button primary" id="saveBrowser" type="button">Save Changes</button>
             <button class="button secondary" id="exportBackup" type="button">Export Backup</button>
-            <button class="button primary" id="downloadAppJs" type="button">⬇ Download app.js</button>
           </div>
           <div class="row-actions">
             <label class="button secondary">
@@ -440,48 +438,6 @@
         setStatus("Backup exported.");
       }
 
-      function downloadAppJs() {
-        syncWhatsApp();
-        const catalogJson = JSON.stringify(catalog, null, 2);
-
-        // Read the current app.js from the server, then swap out only the catalog block
-        fetch("app.js")
-          .then((res) => res.text())
-          .then((source) => {
-            // Replace everything from `window.PT_DEFAULT_CATALOG = {` up to the first `};`
-            // that closes that object (we look for the pattern used in the original file)
-            const newCatalogLine = `window.PT_DEFAULT_CATALOG = ${catalogJson};`;
-            const updated = source.replace(
-              /window\.PT_DEFAULT_CATALOG\s*=\s*\{[\s\S]*?\n\};/,
-              newCatalogLine
-            );
-
-            if (updated === source) {
-              // Fallback: couldn't find the pattern — prepend the catalog assignment
-              setStatus("⚠ Could not auto-patch app.js. Downloading with catalog prepended.");
-              download("app.js", newCatalogLine + "\n\n" + source);
-            } else {
-              setStatus("app.js downloaded! Replace the file on Cloudflare Pages and redeploy.");
-              download("app.js", updated);
-            }
-          })
-          .catch(() => {
-            // If fetch fails (e.g. opened from filesystem), just generate the catalog block
-            // and wrap it with the rest of the known boilerplate stripped of the old catalog
-            setStatus("⚠ Could not read app.js from server — downloading catalog-only file. Manually prepend to your app.js.");
-            download("app.js", `window.PT_DEFAULT_CATALOG = ${catalogJson};\n`);
-          });
-
-        function download(filename, text) {
-          const blob = new Blob([text], { type: "text/javascript" });
-          const link = document.createElement("a");
-          link.href = URL.createObjectURL(blob);
-          link.download = filename;
-          link.click();
-          URL.revokeObjectURL(link.href);
-        }
-      }
-
       function importBackup(event) {
         const file = event.target.files[0];
         if (!file) return;
@@ -537,7 +493,6 @@
       document.querySelector("#addCategory").addEventListener("click", addCategory);
       document.querySelector("#saveBrowser").addEventListener("click", saveToBrowser);
       document.querySelector("#exportBackup").addEventListener("click", exportBackup);
-      document.querySelector("#downloadAppJs").addEventListener("click", downloadAppJs);
       document.querySelector("#importBackup").addEventListener("change", importBackup);
       document.querySelector("#loadOriginal").addEventListener("click", loadOriginal);
       document.querySelector("#clearBrowser").addEventListener("click", clearBrowserSave);
