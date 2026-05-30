@@ -1,0 +1,276 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Pretty Things | Custom 3D Printed Gifts, Decor & Parts</title>
+    <meta
+      name="description"
+      content="Pretty Things makes finished 3D printed objects, custom gifts, decor, toys, tools, and replacement parts. Order through WhatsApp or Instagram."
+    />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Playfair+Display:wght@700;800&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <div class="announcement">Custom 3D prints, gifts, decor and hard-to-find replacement parts</div>
+
+    <header class="site-header" id="home">
+      <a class="brand" href="#home" aria-label="Pretty Things home">
+        <img src="Pretty%20things%20with%20insta%20id.png" alt="Pretty Things logo" />
+      </a>
+      <button class="menu-toggle" type="button" aria-label="Open menu" aria-expanded="false">
+        <span></span>
+        <span></span>
+        <span></span>
+      </button>
+      <nav class="main-nav" aria-label="Primary navigation">
+        <a href="#home">Home</a>
+        <a href="#shop">Shop</a>
+        <a href="#custom">Custom Order</a>
+        <a href="#parts">Replacement Parts</a>
+        <a href="#about">About</a>
+        <a href="#contact">Contact</a>
+      </nav>
+      <a class="header-action" href="#shop">Shop Prints</a>
+    </header>
+
+    <main>
+      <section class="hero" aria-label="Pretty Things featured products">
+        <div class="hero-copy">
+          <p class="eyebrow">Personalized 3D printed pieces</p>
+          <h1>Pretty Things made by love.</h1>
+          <p>
+            Shop finished keychains, plaques and storage gifts, order custom colors and names, or
+            request replacement parts for home and small business repairs.
+          </p>
+          <div class="hero-actions">
+            <a class="button primary" href="#shop">Shop Ready Prints</a>
+            <a class="button secondary" href="#custom">Start Custom Order</a>
+          </div>
+        </div>
+        <div class="hero-media" aria-hidden="true">
+          <img class="hero-large" id="heroMainImage" src="ready/Storage/Display.jpeg" alt="" />
+          <img class="hero-small top" id="heroTopImage" src="ready/keychains/Display.jpg" alt="" />
+          <img class="hero-small bottom" id="heroBottomImage" src="ready/Plaque/Didplay.jpeg" alt="" />
+        </div>
+      </section>
+
+      <section class="trust-strip" aria-label="Why customers choose Pretty Things">
+        <div>
+          <strong>Made to order</strong>
+          <span>Text, color and sizing options</span>
+        </div>
+        <div>
+          <strong>WhatsApp ordering</strong>
+          <span>Fast quote and confirmation</span>
+        </div>
+        <div>
+          <strong>Repair friendly</strong>
+          <span>Part requests with photos and dimensions</span>
+        </div>
+        <div>
+          <strong>Real product photos</strong>
+          <span>Follow @prettythings.53</span>
+        </div>
+      </section>
+
+      <section class="section category-section" aria-label="Shop categories">
+        <div class="section-heading">
+          <p class="eyebrow">Finished Prints Shop</p>
+          <h2>Keychains, plaques and storage gifts.</h2>
+        </div>
+        <div class="category-grid" id="categoryGrid"></div>
+      </section>
+
+      <section class="section shop-section" id="shop">
+        <div class="section-heading wide">
+          <div>
+            <p class="eyebrow">Shop</p>
+            <h2>Ready-to-order prints.</h2>
+          </div>
+          <div class="filters" id="productFilters" aria-label="Product filters"></div>
+        </div>
+        <div class="product-grid" id="productGrid"></div>
+      </section>
+
+      <section class="section split-section" id="custom">
+        <div class="copy-panel">
+          <p class="eyebrow">Customization</p>
+          <h2>Make it personal before it gets printed.</h2>
+          <p>
+            Add a name, choose a color, describe a shape, or upload a reference photo. The form builds
+            a WhatsApp message so ordering stays simple.
+          </p>
+          <ul class="check-list">
+            <li>Names, labels and short text</li>
+            <li>Color matching and multi-color requests</li>
+            <li>Size guidance before printing</li>
+          </ul>
+          <div class="custom-print-gallery" id="customPrintGallery" hidden></div>
+        </div>
+        <form class="form-card" id="customForm">
+          <label>
+            Name or text
+            <input name="text" type="text" placeholder="Example: Aarav, Kitchen Labels" />
+          </label>
+          <div class="form-row">
+            <label>
+              Color
+              <input name="color" type="color" value="#e7a4bb" />
+            </label>
+            <label>
+              Size
+              <select name="size">
+                <option>Small</option>
+                <option selected>Medium</option>
+                <option>Large</option>
+                <option>Not sure</option>
+              </select>
+            </label>
+          </div>
+          <label>
+            Shape or idea
+            <textarea name="idea" rows="4" placeholder="Describe the shape, purpose, colors, and deadline"></textarea>
+          </label>
+          <label>
+            Reference image
+            <input name="reference" type="file" accept="image/*" />
+          </label>
+          <button class="button primary full" type="submit">Send Custom Request on WhatsApp</button>
+        </form>
+      </section>
+
+      <section class="section split-section parts-section" id="parts">
+        <div class="copy-panel">
+          <p class="eyebrow">Replacement Parts</p>
+          <h2>Small parts that are hard to find.</h2>
+          <p>
+            Request knobs, clips, caps, brackets, holders, covers, handles, and other practical pieces
+            for appliances, furniture, vintage items, and repair shops.
+          </p>
+          <div class="mini-search">
+            <input id="partSearch" type="search" placeholder="Search appliance or brand" />
+            <button class="button secondary" type="button" id="partSearchButton">Search</button>
+          </div>
+          <div class="part-tags" aria-label="Popular replacement part examples">
+            <span>Mixer knob</span>
+            <span>Fridge clip</span>
+            <span>Furniture foot</span>
+            <span>Remote cover</span>
+          </div>
+        </div>
+        <form class="form-card" id="partsForm">
+          <label>
+            Appliance or item
+            <input name="appliance" type="text" placeholder="Example: refrigerator shelf clip" />
+          </label>
+          <label>
+            Brand or model
+            <input name="brand" type="text" placeholder="Example: Samsung, Ikea, vintage fan" />
+          </label>
+          <label>
+            Photo of part or space
+            <input name="photo" type="file" accept="image/*" />
+          </label>
+          <label>
+            Dimensions
+            <input name="dimensions" type="text" placeholder="Example: 42mm x 18mm x 6mm" />
+          </label>
+          <label>
+            Notes
+            <textarea name="notes" rows="3" placeholder="Tell us where it fits and what broke"></textarea>
+          </label>
+          <button class="button primary full" type="submit">Send Part Request on WhatsApp</button>
+        </form>
+      </section>
+
+      <section class="section instagram-section">
+        <div class="section-heading wide">
+          <div>
+            <p class="eyebrow">Instagram Gallery</p>
+            <h2>Fresh prints from @prettythings.53.</h2>
+          </div>
+          <a class="button secondary" href="https://www.instagram.com/prettythings.53/" target="_blank" rel="noreferrer">
+            View Instagram
+          </a>
+        </div>
+        <div class="insta-grid">
+          <img src="ready/keychains/Display.jpg" alt="Pretty Things print gallery item" />
+          <img src="ready/Plaque/b1.jpeg" alt="Pretty Things print gallery item" />
+          <img src="ready/Storage/Display1.jpg" alt="Pretty Things print gallery item" />
+          <img src="ready/keychains/Click1.jpg" alt="Pretty Things print gallery item" />
+          <img src="ready/Storage/cc4.jpg" alt="Pretty Things print gallery item" />
+          <img src="ready/Plaque/mom1.jpeg" alt="Pretty Things print gallery item" />
+        </div>
+      </section>
+
+      <section class="section about-section" id="about">
+        <div class="about-media">
+          <img src="ready/Storage/Display1.jpg" alt="Close-up of Pretty Things print quality" />
+        </div>
+        <div>
+          <p class="eyebrow">About</p>
+          <h2>Useful, giftable, and carefully finished 3D prints.</h2>
+          <p>
+            Pretty Things creates finished printed objects for gift buyers, home owners, general
+            consumers, small businesses, and repair shops. Each order is reviewed for shape, color,
+            strength, and surface finish before printing.
+          </p>
+          <div class="material-grid">
+            <span>PLA</span>
+            <span>Silk finishes</span>
+            <span>Matte colors</span>
+            <span>Functional fits</span>
+          </div>
+        </div>
+      </section>
+
+      <section class="section contact-section" id="contact">
+        <div class="contact-copy">
+          <p class="eyebrow">Contact</p>
+          <h2>Send an idea, a photo, or a repair problem.</h2>
+          <p>
+            Order through WhatsApp, send a DM on Instagram, or leave an inquiry and we will help turn
+            it into a printable product.
+          </p>
+          <div class="contact-actions">
+            <a class="button primary" id="contactWhatsapp" href="#">WhatsApp Order</a>
+            <a class="button secondary" href="https://www.instagram.com/prettythings.53/" target="_blank" rel="noreferrer">
+              Instagram DM
+            </a>
+          </div>
+        </div>
+        <form class="form-card" id="contactForm">
+          <label>
+            Your name
+            <input name="name" type="text" placeholder="Name" />
+          </label>
+          <label>
+            Contact
+            <input name="contact" type="text" placeholder="Phone or Instagram username" />
+          </label>
+          <label>
+            Inquiry
+            <textarea name="message" rows="4" placeholder="What would you like to print?"></textarea>
+          </label>
+          <button class="button primary full" type="submit">Send Inquiry on WhatsApp</button>
+        </form>
+      </section>
+    </main>
+
+    <footer class="site-footer">
+      <img src="Pretty%20things%20with%20insta%20id.png" alt="Pretty Things logo" />
+      <p>Finished prints, custom orders and replacement parts.</p>
+      <a href="https://www.instagram.com/prettythings.53/" target="_blank" rel="noreferrer">@prettythings.53</a>
+    </footer>
+
+    <a class="floating-whatsapp" id="floatingWhatsapp" href="#" aria-label="Order on WhatsApp">WA</a>
+
+    <script src="app.js"></script>
+  </body>
+</html>

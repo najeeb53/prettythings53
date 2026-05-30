@@ -1,0 +1,502 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Pretty Things Admin</title>
+    <link rel="stylesheet" href="styles.css" />
+    <style>
+      body {
+        background: #fff8f2;
+      }
+
+      .admin-shell {
+        margin: 0 auto;
+        max-width: 1240px;
+        padding: 2rem 1rem 4rem;
+      }
+
+      .admin-header,
+      .admin-toolbar,
+      .category-title,
+      .row-actions {
+        align-items: center;
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.75rem;
+        justify-content: space-between;
+      }
+
+      .admin-header {
+        margin-bottom: 1.25rem;
+      }
+
+      .admin-header h1 {
+        font-size: clamp(2rem, 5vw, 4rem);
+      }
+
+      .admin-card {
+        background: #fff;
+        border: 1px solid var(--line);
+        box-shadow: var(--shadow);
+        margin-bottom: 1rem;
+        padding: 1rem;
+        border-radius: 8px;
+      }
+
+      .admin-help {
+        color: rgba(37, 33, 38, 0.74);
+        line-height: 1.65;
+        margin: 0;
+      }
+
+      .admin-grid {
+        display: grid;
+        gap: 0.75rem;
+        grid-template-columns: 1fr 0.65fr 1fr;
+      }
+
+      .admin-products {
+        display: grid;
+        gap: 0.75rem;
+        margin-top: 1rem;
+      }
+
+      .admin-product {
+        align-items: end;
+        border-top: 1px solid var(--line);
+        display: grid;
+        gap: 0.75rem;
+        grid-template-columns: 96px 1fr 0.45fr 1.15fr auto;
+        padding-top: 0.75rem;
+      }
+
+      .admin-product img {
+        aspect-ratio: 1 / 1;
+        background: var(--cream);
+        border: 1px solid var(--line);
+        object-fit: cover;
+        width: 96px;
+        border-radius: 6px;
+      }
+
+      .admin-note {
+        background: var(--cream);
+        border: 1px solid var(--line);
+        color: rgba(37, 33, 38, 0.74);
+        line-height: 1.6;
+        margin: 1rem 0 0;
+        padding: 0.85rem;
+        border-radius: 6px;
+      }
+
+      .danger {
+        border-color: rgba(164, 75, 114, 0.35);
+        color: var(--pink-deep);
+      }
+
+      .status {
+        color: var(--pink-deep);
+        font-weight: 900;
+        min-height: 1.3rem;
+      }
+
+      @media (max-width: 880px) {
+        .admin-header,
+        .admin-toolbar,
+        .category-title,
+        .admin-grid,
+        .admin-product {
+          display: grid;
+          grid-template-columns: 1fr;
+        }
+
+        .admin-product img {
+          width: 100%;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <main class="admin-shell">
+      <div class="admin-header">
+        <div>
+          <p class="eyebrow">Owner Tool</p>
+          <h1>Catalog Admin</h1>
+        </div>
+        <a class="button secondary" href="index.html">Open Website</a>
+      </div>
+
+      <section class="admin-card">
+        <p class="admin-help">
+          Use this page to add products, change prices, change images, and add categories. Put new
+          product images inside the correct folder first, then use the image path here, for example
+          <strong>ready/keychains/Click1.jpg</strong>.
+        </p>
+        <div class="admin-note">
+          <strong>Save Changes</strong> updates the website in this browser immediately.
+          <strong>Export Backup</strong> downloads a JSON backup you can import later.
+        </div>
+      </section>
+
+      <section class="admin-card">
+        <div class="admin-grid">
+          <label>
+            WhatsApp number with country code
+            <input id="whatsappNumber" type="text" placeholder="Example: 919876543210" />
+          </label>
+          <label>
+            New category ID
+            <input id="newCategoryId" type="text" placeholder="example: toys" />
+          </label>
+          <label>
+            New category name
+            <input id="newCategoryLabel" type="text" placeholder="Example: Toys" />
+          </label>
+        </div>
+        <div class="admin-toolbar">
+          <div class="row-actions">
+            <button class="button secondary" id="addCategory" type="button">Add Category</button>
+            <button class="button primary" id="saveBrowser" type="button">Save Changes</button>
+            <button class="button secondary" id="exportBackup" type="button">Export Backup</button>
+          </div>
+          <div class="row-actions">
+            <label class="button secondary">
+              Import Backup
+              <input id="importBackup" type="file" accept="application/json" hidden />
+            </label>
+            <button class="button secondary" id="loadOriginal" type="button">Load Built-In Defaults</button>
+            <button class="button secondary danger" id="clearBrowser" type="button">Clear Browser Save</button>
+          </div>
+        </div>
+        <p class="status" id="status"></p>
+      </section>
+
+      <section id="editor"></section>
+    </main>
+
+    <script src="app.js"></script>
+    <script>
+      const STORAGE_KEY = "PRETTY_THINGS_STORE_DATA";
+      const originalCatalog = structuredClone(window.PT_DEFAULT_CATALOG);
+      let catalog = loadCatalog();
+
+      const editor = document.querySelector("#editor");
+      const statusText = document.querySelector("#status");
+      const whatsappInput = document.querySelector("#whatsappNumber");
+
+      function loadCatalog() {
+        try {
+          const saved = localStorage.getItem(STORAGE_KEY);
+          return saved ? JSON.parse(saved) : structuredClone(window.PT_DEFAULT_CATALOG);
+        } catch {
+          return structuredClone(window.PT_DEFAULT_CATALOG);
+        }
+      }
+
+      function cleanId(value) {
+        return value
+          .trim()
+          .toLowerCase()
+          .replace(/[^a-z0-9]+/g, "-")
+          .replace(/^-|-$/g, "");
+      }
+
+      function escapeHtml(value) {
+        return String(value ?? "")
+          .replace(/&/g, "&amp;")
+          .replace(/</g, "&lt;")
+          .replace(/>/g, "&gt;")
+          .replace(/"/g, "&quot;");
+      }
+
+      function setStatus(message) {
+        statusText.textContent = message;
+      }
+
+      function syncWhatsApp() {
+        catalog.whatsappNumber = whatsappInput.value.trim();
+      }
+
+      function productRow(product, categoryIndex, productIndex) {
+        return `
+          <div class="admin-product">
+            <img src="${escapeHtml(product.image)}" alt="">
+            <label>
+              Product name
+              <input data-product-field="name" data-category="${categoryIndex}" data-product="${productIndex}" value="${escapeHtml(product.name)}">
+            </label>
+            <label>
+              Price
+              <input data-product-field="price" data-category="${categoryIndex}" data-product="${productIndex}" value="${escapeHtml(product.price)}">
+            </label>
+            <label>
+              Image path
+              <input data-product-field="image" data-category="${categoryIndex}" data-product="${productIndex}" value="${escapeHtml(product.image)}">
+            </label>
+            <button class="button secondary danger" type="button" data-delete-product="${productIndex}" data-category="${categoryIndex}">Delete</button>
+          </div>
+        `;
+      }
+
+      function customPrintRow(item, index) {
+        return `
+          <div class="admin-product">
+            <img src="${escapeHtml(item.image)}" alt="">
+            <label>
+              Custom print name
+              <input data-custom-field="name" data-custom="${index}" value="${escapeHtml(item.name)}">
+            </label>
+            <label>
+              Label
+              <input value="Custom Print" disabled>
+            </label>
+            <label>
+              Image path
+              <input data-custom-field="image" data-custom="${index}" value="${escapeHtml(item.image)}">
+            </label>
+            <button class="button secondary danger" type="button" data-delete-custom="${index}">Delete</button>
+          </div>
+        `;
+      }
+
+      function renderEditor() {
+        whatsappInput.value = catalog.whatsappNumber || "";
+        catalog.customPrints ||= [];
+        const categoryEditor = catalog.categories
+          .map(
+            (category, categoryIndex) => `
+              <article class="admin-card">
+                <div class="category-title">
+                  <div>
+                    <p class="eyebrow">${escapeHtml(category.label)}</p>
+                    <h2>${escapeHtml(category.label)}</h2>
+                  </div>
+                  <div class="row-actions">
+                    <button class="button secondary" type="button" data-add-product="${categoryIndex}">Add Product</button>
+                    <button class="button secondary danger" type="button" data-delete-category="${categoryIndex}">Delete Category</button>
+                  </div>
+                </div>
+                <div class="admin-grid">
+                  <label>
+                    Category ID
+                    <input data-category-field="id" data-category="${categoryIndex}" value="${escapeHtml(category.id)}">
+                  </label>
+                  <label>
+                    Category name
+                    <input data-category-field="label" data-category="${categoryIndex}" value="${escapeHtml(category.label)}">
+                  </label>
+                  <label>
+                    Display image
+                    <input data-category-field="displayImage" data-category="${categoryIndex}" value="${escapeHtml(category.displayImage)}">
+                  </label>
+                </div>
+                <label>
+                  Description
+                  <input data-category-field="description" data-category="${categoryIndex}" value="${escapeHtml(category.description)}">
+                </label>
+                <div class="admin-products">
+                  ${category.products.map((product, productIndex) => productRow(product, categoryIndex, productIndex)).join("")}
+                </div>
+              </article>
+            `
+          )
+          .join("");
+
+        editor.innerHTML = `
+          <article class="admin-card">
+            <div class="category-title">
+              <div>
+                <p class="eyebrow">Custom Prints</p>
+                <h2>Custom Print Pictures</h2>
+              </div>
+              <button class="button secondary" type="button" id="addCustomPrint">Add Custom Print Picture</button>
+            </div>
+            <p class="admin-help">These images appear in the Custom Order section. Put images in a folder first, then add that image path here.</p>
+            <div class="admin-products">
+              ${catalog.customPrints.map((item, index) => customPrintRow(item, index)).join("")}
+            </div>
+          </article>
+          ${categoryEditor}
+        `;
+      }
+
+      function updateCatalog(event) {
+        const categoryField = event.target.dataset.categoryField;
+        const productField = event.target.dataset.productField;
+
+        if (categoryField) {
+          const category = catalog.categories[Number(event.target.dataset.category)];
+          category[categoryField] = categoryField === "id" ? cleanId(event.target.value) : event.target.value;
+        }
+
+        if (productField) {
+          const product =
+            catalog.categories[Number(event.target.dataset.category)].products[Number(event.target.dataset.product)];
+          product[productField] = event.target.value;
+          if (productField === "image") {
+            const preview = event.target.closest(".admin-product").querySelector("img");
+            preview.src = event.target.value;
+          }
+        }
+
+        const customField = event.target.dataset.customField;
+        if (customField) {
+          const item = catalog.customPrints[Number(event.target.dataset.custom)];
+          item[customField] = event.target.value;
+          if (customField === "image") {
+            event.target.closest(".admin-product").querySelector("img").src = event.target.value;
+          }
+        }
+      }
+
+      function addCategory() {
+        const idInput = document.querySelector("#newCategoryId");
+        const labelInput = document.querySelector("#newCategoryLabel");
+        const label = labelInput.value.trim();
+        const id = cleanId(idInput.value || label);
+
+        if (!id || !label) {
+          setStatus("Enter both category ID and category name.");
+          return;
+        }
+
+        if (catalog.categories.some((category) => category.id === id)) {
+          setStatus("That category ID already exists.");
+          return;
+        }
+
+        catalog.categories.push({
+          id,
+          label,
+          displayImage: `ready/${id}/Display.jpg`,
+          description: "",
+          products: [],
+        });
+        idInput.value = "";
+        labelInput.value = "";
+        renderEditor();
+        setStatus("Category added. Add products and save when ready.");
+      }
+
+      function addProduct(categoryIndex) {
+        const category = catalog.categories[categoryIndex];
+        category.products.push({
+          name: "New Product",
+          price: "Rs. 0",
+          image: `ready/${category.id}/new-product.jpg`,
+        });
+        renderEditor();
+        setStatus("Product added. Edit its name, price, and image path.");
+      }
+
+      function addCustomPrint() {
+        catalog.customPrints ||= [];
+        catalog.customPrints.push({
+          name: "New Custom Print",
+          image: "ready/custom/new-custom-print.jpg",
+        });
+        renderEditor();
+        setStatus("Custom print picture added. Edit its name and image path.");
+      }
+
+      function deleteProduct(categoryIndex, productIndex) {
+        catalog.categories[categoryIndex].products.splice(productIndex, 1);
+        renderEditor();
+        setStatus("Product removed. Save when ready.");
+      }
+
+      function deleteCategory(categoryIndex) {
+        const category = catalog.categories[categoryIndex];
+        const ok = confirm(`Delete the category "${category.label}" and all products inside it?`);
+        if (!ok) return;
+        catalog.categories.splice(categoryIndex, 1);
+        renderEditor();
+        setStatus("Category removed. Save when ready.");
+      }
+
+      function deleteCustomPrint(index) {
+        catalog.customPrints.splice(index, 1);
+        renderEditor();
+        setStatus("Custom print picture removed. Save when ready.");
+      }
+
+      function saveToBrowser() {
+        syncWhatsApp();
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(catalog));
+        setStatus("Saved. Open or refresh the website in this browser to see the changes.");
+      }
+
+      function exportBackup() {
+        syncWhatsApp();
+        const blob = new Blob([JSON.stringify(catalog, null, 2)], { type: "application/json" });
+        const link = document.createElement("a");
+        link.href = URL.createObjectURL(blob);
+        link.download = "pretty-things-catalog-backup.json";
+        link.click();
+        URL.revokeObjectURL(link.href);
+        setStatus("Backup exported.");
+      }
+
+      function importBackup(event) {
+        const file = event.target.files[0];
+        if (!file) return;
+
+        const reader = new FileReader();
+        reader.onload = () => {
+          try {
+            const importedCatalog = JSON.parse(reader.result);
+            if (!Array.isArray(importedCatalog.categories)) {
+              throw new Error("Missing categories");
+            }
+
+            catalog = importedCatalog;
+            catalog.customPrints ||= [];
+            renderEditor();
+            setStatus("Backup imported. Click Save Changes to use it on the website.");
+          } catch {
+            setStatus("That backup file could not be imported.");
+          }
+        };
+        reader.readAsText(file);
+      }
+
+      function loadOriginal() {
+        catalog = structuredClone(originalCatalog);
+        renderEditor();
+        setStatus("Loaded built-in defaults. Save if you want to use them.");
+      }
+
+      function clearBrowserSave() {
+        localStorage.removeItem(STORAGE_KEY);
+        catalog = structuredClone(originalCatalog);
+        renderEditor();
+        setStatus("Browser save cleared. The website will use built-in defaults after refresh.");
+      }
+
+      editor.addEventListener("input", updateCatalog);
+      editor.addEventListener("click", (event) => {
+        const addProductIndex = event.target.dataset.addProduct;
+        const deleteProductIndex = event.target.dataset.deleteProduct;
+        const deleteCategoryIndex = event.target.dataset.deleteCategory;
+
+        if (addProductIndex !== undefined) addProduct(Number(addProductIndex));
+        if (deleteProductIndex !== undefined) {
+          deleteProduct(Number(event.target.dataset.category), Number(deleteProductIndex));
+        }
+        if (deleteCategoryIndex !== undefined) deleteCategory(Number(deleteCategoryIndex));
+        if (event.target.id === "addCustomPrint") addCustomPrint();
+        if (event.target.dataset.deleteCustom !== undefined) deleteCustomPrint(Number(event.target.dataset.deleteCustom));
+      });
+
+      whatsappInput.addEventListener("input", syncWhatsApp);
+      document.querySelector("#addCategory").addEventListener("click", addCategory);
+      document.querySelector("#saveBrowser").addEventListener("click", saveToBrowser);
+      document.querySelector("#exportBackup").addEventListener("click", exportBackup);
+      document.querySelector("#importBackup").addEventListener("change", importBackup);
+      document.querySelector("#loadOriginal").addEventListener("click", loadOriginal);
+      document.querySelector("#clearBrowser").addEventListener("click", clearBrowserSave);
+      renderEditor();
+    </script>
+  </body>
+</html>
